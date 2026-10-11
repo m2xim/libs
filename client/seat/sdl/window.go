@@ -224,11 +224,34 @@ func (win *Window) initGL() error {
 	if err != nil {
 		return fmt.Errorf("OpenGL bind failed: %w", err)
 	}
-	sdl.GLSetSwapInterval(0)
+	win.setVSync()
 	if err := win.gl.Init(win.log); err != nil {
 		return err
 	}
 	return nil
+}
+
+// setVSync enables vertical sync to avoid tearing while the camera scrolls.
+// NOX_VSYNC=0 disables it, NOX_VSYNC=-1 requests adaptive vsync.
+func (win *Window) setVSync() {
+	if os.Getenv("NOX_VSYNC") == "0" {
+		sdl.GLSetSwapInterval(0)
+		win.log.Info("vsync: off")
+		return
+	}
+	// Adaptive vsync is opt-in: the game presents at 30 FPS, below the display refresh rate,
+	// so with adaptive vsync almost every frame counts as "late" and is swapped immediately (tearing).
+	if os.Getenv("NOX_VSYNC") == "-1" {
+		if err := sdl.GLSetSwapInterval(-1); err == nil {
+			win.log.Info("vsync: adaptive")
+			return
+		}
+	}
+	if err := sdl.GLSetSwapInterval(1); err != nil {
+		win.log.Warn("vsync: cannot enable", "err", err)
+		return
+	}
+	win.log.Info("vsync: on")
 }
 
 func (win *Window) Present() {
