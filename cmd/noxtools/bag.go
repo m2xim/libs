@@ -232,7 +232,11 @@ func (e *extractor) writeFile(name string, r io.Reader, sz int64) error {
 		_, err = io.Copy(e.tw, r)
 		return err
 	default:
-		f, err := os.Create(filepath.Join(e.out, name))
+		fpath := filepath.Join(e.out, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(fpath), 0755); err != nil {
+			return err
+		}
+		f, err := os.Create(fpath)
 		if err != nil {
 			return err
 		}
